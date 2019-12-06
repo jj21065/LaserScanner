@@ -1,0 +1,8 @@
+﻿  main.cpp
+d:\git\laser-scanner\calibration.h(46): warning C4244: '引數': 將 'int' 轉換為 '_Tp'，由於類型不同，可能導致資料遺失
+          with
+          [
+              _Tp=float
+          ]
+d:\git\laser-scanner\calibration.h(72): warning C4477: 'printf' : 格式字串 '%d' 需要 'int' 類型的引數，但 variadic 引數 1 的類型為 'double'
+  LaserScanner.vcxproj -> D:\Git\Laser-Scanner\x64\Debug\LaserScanner.exe
