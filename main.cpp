@@ -15,27 +15,32 @@ int main()
 	Mat dst;
 	calibrater.calibrate(src, dst);
 
-	/*while (1)
+	while (1)
 	{
 		src = camera.shot();
 		calibrater.Remap(src);
-		imshow("Undistorted Image", src);
+		cv::Mat dst;
+		calibrater.Thresholding(src, dst, 210);
+		imshow("Undistorted Image", dst);
+
+
+		vector<cv::Point> output;
+		laser.FindLaserPoint(dst, &output);
+		std::cout << laser.GetDistance(output[40]) << endl;
+	/*	for (int i = 0; i < 30; i++)
+		{
+			std::cout << output[i] << endl;
+		}*/
 		cv::waitKey(35);
-	}*/
+	}
 
 	//camera.shot();
-	//camera.ContinueShot();
-	/*cv::Mat img = cv::imread("test.png", CV_LOAD_IMAGE_GRAYSCALE);
-	cv::imshow("test",img);
-	vector<cv::Point> output;
-	laser.FindLaserPoint(img, &output);
-	for (int i = 0; i < output.size(); i++)
-	{
-		std::cout << (output[i]) << endl;
-	}
-	
-	std::cout << "test" << std::endl;
-	cv::waitKey(0);*/
+	/*camera.ContinueShot();
+	cv::Mat img = cv::imread("test.png", CV_LOAD_IMAGE_GRAYSCALE);
+	cv::imshow("test",img);*/
+
+
+	cv::waitKey(0);
 	system("pause");
 	return 0;
 }

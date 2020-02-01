@@ -7,9 +7,9 @@ enum SideSystem { CALI_LASER, CALI_PROJECTOR, CALI_CAMERA };
 
 class Calibrater
 {
-	public :
-		Calibrater() {}
-		~Calibrater(){}
+public:
+	Calibrater() {}
+	~Calibrater() {}
 private:
 	vector<string> m_filenames;
 	Size m_borderSize;
@@ -18,20 +18,20 @@ private:
 	double distortionCali = 1;
 	Mat cameraMatrix, distCoeffs, map1, map2;
 	vector<Mat> rvecs, tvecs;
-	double focalLength = 0;
+	
 public:
-	
-	Calibrater( SideSystem ss );
-	
+
+	Calibrater(SideSystem ss);
+
 	void setFilename() {
 		m_filenames.clear();
-		
+
 		for (int i = 1; i < 14; i++)
 		{
 			std::string filename = format("picture%d.jpg", i);
 			m_filenames.push_back(filename);
 		}
-		
+
 	}
 
 	void setBorderSize(const Size& borderSize) {
@@ -67,12 +67,12 @@ public:
 
 	void calibrate(const Mat& src, Mat& dst) {
 		Size imageSize = src.size();
-		
+
 		double result = calibrateCamera(m_dstPoints, m_srcPoints, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs);
 		printf("calibrate : %d\n", result);
 		initUndistortRectifyMap(cameraMatrix, distCoeffs, Mat(), Mat(), imageSize, CV_32F, map1, map2);
 		std::cout << cameraMatrix << endl;
-	
+
 		Mat newMatrix;
 		cameraMatrix.convertTo(newMatrix, CV_32F);
 
@@ -81,25 +81,71 @@ public:
 
 
 		FileStorage fs("test.yml", FileStorage::WRITE);
-		 fs << "intrinsic" << cameraMatrix;
+		fs << "intrinsic" << cameraMatrix;
 		fs << "distcoeff" << distCoeffs;
 
 		remap(src, dst, map1, map2, INTER_LINEAR);
 		distortionCali = result;
 	}
+
+	void Thresholding(Mat& src, Mat& grayImag,int threshold)
+	{
+	
+		if (src.channels() > 1)
+		{
+			cv::cvtColor(src, grayImag, CV_BGR2GRAY);//±m¦âÂà¦Ç¶¥
+		}
+		for (int i = 0; i < src.rows; i++)
+		{
+			uchar* ptr = grayImag.ptr<uchar>(i);
+			uchar* srcPtr = src.ptr<uchar>(i);
+			
+			for (int j = 0; j < src.cols; j++)
+			{
+				if (ptr[j] < threshold)
+				{
+					ptr[j] = 0;
+				}
+				else
+				{
+					if (srcPtr[j * 3 + 2] < threshold)
+					{
+						ptr[j] = 0;
+					}
+				}
+			}
+
+		}
+		
+	}
 	void Remap(const Mat& src)
 	{
 		Size imageSize = src.size();
-	
+
 		initUndistortRectifyMap(cameraMatrix, distCoeffs, Mat(), Mat(), imageSize, CV_32F, map1, map2);
 		remap(src, src, map1, map2, INTER_LINEAR);
 	}
 
-	void GetFocalLength()
+	void GetFocalLength(float* fx, float* fy)
 	{
+		Mat newMatrix;
+		cameraMatrix.convertTo(newMatrix, CV_32F);
 
+		float* ptr = newMatrix.ptr<float>(0);
+		std::cout << "new " << ptr[0] << endl;
+		*fx = ptr[0];
+		*fy = ptr[4];
 	}
 
-	private : 
-	
+	void GetImageCenter(float* cx, float* cy)
+	{
+		Mat newMatrix;
+		cameraMatrix.convertTo(newMatrix, CV_32F);
+		float* ptr = newMatrix.ptr<float>(0);
+		std::cout << "new " << ptr[0] << endl;
+		*cx = ptr[0];
+		*cy = ptr[4];
+	}
+private:
+
 };

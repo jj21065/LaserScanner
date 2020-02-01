@@ -1,47 +1,70 @@
 #include "laser.h"
 #include <math.h>
-
+#include <time.h>
+#include <iostream>
 #define PI 3.14159
 #pragma comment(lib, "opecv2416/x64/vc15/lib/opencv_core2413d.lib")
 
 
-float LineLaser::Gaussian_approx(vector<cv::Point2f> &input)
+float LineLaser::Gaussian_approx(vector<cv::Point2f>& input)
 {
 	const int dataSize = input.size();
+	cv::Mat cvZ = cv::Mat::zeros(cv::Size(1, dataSize), CV_32F);
+	cv::Mat cvX = cv::Mat::zeros(cv::Size(3, dataSize), CV_32F); ;
 
-	MatrixXd Z(dataSize, 1);
-	MatrixXd X(dataSize, 3);
 
 	for (int i = 0; i < dataSize; i++) // initialize the matrix 
 	{
-
-		X(i, 0) = 1;
-		X(i, 1) = input[i].x;
-		X(i, 2) = (double)input[i].x * (double)input[i].x;
-
-		Z(i, 0) = input[i].y;
+		float* ptr = cvX.ptr<float>(i);
+		float* ptrz = cvZ.ptr<float>(i);
+		ptr[0] = 1;
+		ptr[1] = input[i].x;
+		ptr[2] = (double)input[i].x * (double)input[i].x;
+		ptrz[0] = input[i].y;
 	}
 	//cout << X << endl;
-	
-	MatrixXd B = ((X.transpose() * X).inverse()) * X.transpose() * Z; // Get the coefficient of the gaussian approximation
-	double S = -1 / B(2);
-	double xmax = B(1) * S / 2;
-	double ymax = B(0) + xmax * xmax / S;
-	cout << "Max x  = " << xmax << endl;
-	cout << "Max y = " << ymax << endl;
+	cv::Mat B = ((cvX.t() * cvX).inv()) * cvX.t() * cvZ;
+
+	double S = -1 / B.ptr<float>(0)[2];
+	double xmax = B.ptr<float>(0)[1] * S / 2;
+	double ymax = B.ptr<float>(0)[0] + xmax * xmax / S;
 
 	return xmax;
 }
-
-///Find the brightest points in input image of each row , maybe need to binarize the input image first
-void LineLaser::FindLaserPoint(cv::Mat& inputImg, vector<cv::Point> *outputPoint)
+float Gaussian_approx_2(uchar *input, int dataSize)
 {
-	const int threshold =10;
-	const int minum_number = 3;
-	int raisePos = 0;
-	int fallPos = 0;
-	int centerPos = 0;
-	unsigned char maxPwr = 0;
+	
+	
+	cv::Mat cvZ = cv::Mat::zeros(cv::Size(1, dataSize), CV_32F);
+	cv::Mat cvX = cv::Mat::zeros(cv::Size(3, dataSize), CV_32F); ;
+
+
+	for (int i = 0; i < dataSize; i++) // initialize the matrix 
+	{
+		float* ptr = cvX.ptr<float>(i);
+		float* ptrz = cvZ.ptr<float>(i);
+		ptr[0] = 1;
+		ptr[1] = i;
+		ptr[2] = (double)i * i;
+		ptrz[0] = input[i];
+	}
+	//cout << X << endl;
+	cv::Mat B = ((cvX.t() * cvX).inv()) * cvX.t() * cvZ;
+
+	double S = -1 / B.ptr<float>(0)[2];
+	double xmax = B.ptr<float>(0)[1] * S / 2;
+	double ymax = B.ptr<float>(0)[0] + xmax * xmax / S;
+
+	return xmax;
+}
+///Find the brightest points in input image of each row , maybe need to binarize the input image first
+void LineLaser::FindLaserPoint(cv::Mat& inputImg, vector<cv::Point>* outputPoint)
+{
+	double START, END;
+	START = clock();
+	/*---要計算的程式效率區域---*/
+	
+	const int threshold = 10;
 
 	int col = inputImg.cols;
 	int row = inputImg.rows;
@@ -49,22 +72,14 @@ void LineLaser::FindLaserPoint(cv::Mat& inputImg, vector<cv::Point> *outputPoint
 
 	for (int j = 0; j < row; j++)
 	{
-	
-		vector<cv::Point2f> rowData;
-		for (int i = 0; i < col; i++)
-		{
-			if (inputImg.at<uchar>(j, i) > threshold)
-			{
-				rowData.push_back(cv::Point(i,inputImg.at<uchar>(j, i)));
-			}		
-		}
-		if (rowData.size() > minum_number)
-		{
-			float max_x = Gaussian_approx(rowData);
-			outputPoint->push_back(cv::Point(max_x, j)); // (x,y)
-		}
-	
+		uchar* ptr = inputImg.ptr<uchar>(j);
+		float max_x =Gaussian_approx_2(ptr, col);
+		outputPoint->push_back(cv::Point(max_x, j));
+
 	}
+
+	END = clock();
+	//.std::cout << (END - START) / CLOCKS_PER_SEC << endl;
 }
 
 
@@ -78,18 +93,18 @@ double LineLaser::GetDistance(cv::Point inputPoint)
 
 	const float laser_angle = 1.486407302;  /// laser 夾度 85度
 
-	const float focal = a / baseline;    
+	const float focal = a / baseline;
 
 	float center_distance = a / (b - c * inputPoint.x);
 
-	float pitch_angle = atan(((inputPoint.y - Height/ 2) * c) / (focal));
+	float pitch_angle = atan(((inputPoint.y - Height / 2) * c) / (focal));
 	float pitch_distance = center_distance / cos(pitch_angle);
 
 	float laser_to_dist_pt = center_distance * tan(PI / 2 - laser_angle);
 	float laser_to_current_pt = sqrt(pitch_distance * pitch_distance + laser_to_dist_pt * laser_to_dist_pt);
 	float laser_to_center_pt = sqrt(center_distance * center_distance + laser_to_dist_pt * laser_to_dist_pt);
 
-	float real_distance = sqrt((laser_to_dist_pt) * (laser_to_dist_pt) + pitch_distance * pitch_distance);
+	float real_distance = sqrt((laser_to_dist_pt) * (laser_to_dist_pt)+pitch_distance * pitch_distance);
 
 	return real_distance;
 }

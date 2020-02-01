@@ -1,9 +1,8 @@
 //#include<opencv2/opencv.hpp>
 #include "camera.h"
 #include <vector>
-#include <Eigen/Dense>
+
 using namespace std;
-using Eigen::MatrixXd;
 
 class LineLaser:Camera
 {
